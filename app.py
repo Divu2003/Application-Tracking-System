@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-print("Hello, World!") 
-=======
 import streamlit as st
 from dotenv import load_dotenv
 import base64
@@ -188,4 +185,3 @@ elif submit3:
             st.write(response)
     else:
         st.write("Please upload the resume")
->>>>>>> origin/main
