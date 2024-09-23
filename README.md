@@ -22,6 +22,6 @@ Ensure you have Poppler installed for PDF processing.
 To use the PDF processing features, you need to have Poppler installed on your system. Here’s how to install it:
 
 ### Windows
-Download the binaries from [Poppler for Windows](http://blog.alivate.com.au/poppler-windows/). Make sure to add the bin directory to your system's PATH.
+Download the binaries from [Poppler for Windows](https://github.com/oschwartz10612/poppler-windows). Make sure to add the bin directory to your system's PATH.
 
 
