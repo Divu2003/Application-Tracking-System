@@ -6,7 +6,6 @@ import io
 from PIL import Image
 import pdf2image
 import google.generativeai as genai
-import subprocess
 
 # Load environment variables
 load_dotenv()
@@ -17,11 +16,7 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 # Specify the path to Poppler's binaries
 poppler_path = r'C:\Users\sakshi\Projects\ATS Tracker Sytem\poppler-24.02.0\Library\bin'  # Replace with the actual path to Poppler's bin directory
 
-# Check if Poppler is installed
-try:
-    subprocess.run(['pdftoppm', '-v'], check=True)
-except FileNotFoundError:
-    st.error("Poppler is not installed. Please follow the instructions in the README to install it.")
+
 
 def get_gemini_response(input, pdf_content, prompt):
     model = genai.GenerativeModel('gemini-1.5-flash')
