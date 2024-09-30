@@ -17,7 +17,6 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 poppler_path = r'C:\Users\sakshi\Projects\ATS Tracker Sytem\poppler-24.02.0\Library\bin'  # Replace with the actual path to Poppler's bin directory
 
 
-
 def get_gemini_response(input, pdf_content, prompt):
     model = genai.GenerativeModel('gemini-1.5-flash')
     response = model.generate_content([input, pdf_content[0], prompt])
