@@ -17,14 +17,4 @@ This project is an Applicant Tracking System (ATS) built using Streamlit and Goo
 * pdf2image: For converting PDF pages to images.
 * Google Generative AI: For resume evaluation and feedback.
 * dotenv: For managing environment variables.
-* Poppler: Required for PDF processing.
-
-Ensure you have Poppler installed for PDF processing.
-## Installing Poppler
-
-To use the PDF processing features, you need to have Poppler installed on your system. Here’s how to install it:
-
-### Windows
-Download the binaries from [Poppler for Windows](https://github.com/oschwartz10612/poppler-windows). Make sure to add the bin directory to your system's PATH.
-
 
