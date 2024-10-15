@@ -195,7 +195,3 @@ elif submit3:
             st.write(response)
     else:
         st.write("Please upload the ZIP file containing resumes.")
-<<<<<<< HEAD
-
-=======
->>>>>>> 3fcb74b4173933eabd37b14d513c2458a5c43cc0
