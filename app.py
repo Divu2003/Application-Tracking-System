@@ -4,18 +4,15 @@ import base64
 import os
 import io
 from PIL import Image
-import pdf2image
+import fitz  # PyMuPDF
 import google.generativeai as genai
+import zipfile
 
 # Load environment variables
 load_dotenv()
 
 # Configure the Google generative AI model
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-
-# Specify the path to Poppler's binaries
-poppler_path = r'C:\Users\sakshi\Projects\ATS Tracker Sytem\poppler-24.02.0\Library\bin'  # Replace with the actual path to Poppler's bin directory
-
 
 def get_gemini_response(input, pdf_content, prompt):
     model = genai.GenerativeModel('gemini-1.5-flash')
@@ -25,27 +22,50 @@ def get_gemini_response(input, pdf_content, prompt):
 def input_pdf_setup(uploaded_file):
     if uploaded_file is not None:
         try:
-            # Convert the PDF to image using the specified Poppler path
-            images = pdf2image.convert_from_bytes(uploaded_file.read(), poppler_path=poppler_path)
-            first_page = images[0]
-
-            # Convert to bytes
+            # Open the PDF document
+            pdf_document = fitz.open(stream=uploaded_file.read(), filetype="pdf")
+            first_page = pdf_document[0]  # Access the first page
+            
+            # Create a pixmap (an image representation) of the page
+            pix = first_page.get_pixmap()
             img_byte_arr = io.BytesIO()
-            first_page.save(img_byte_arr, format='JPEG')
-            img_byte_arr = img_byte_arr.getvalue()
-
+            img_byte_arr.write(pix.tobytes("jpeg"))  # Convert to JPEG
+            
             pdf_parts = [
                 {
                     "mime_type": "image/jpeg",
-                    "data": base64.b64encode(img_byte_arr).decode()  # encode to base64
+                    "data": base64.b64encode(img_byte_arr.getvalue()).decode()  # Encode to base64
                 }
             ]
             return pdf_parts
-        except pdf2image.exceptions.PDFInfoNotInstalledError:
-            st.error("Poppler is not installed or not in the PATH. Please install Poppler to proceed.")
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
             return None
     else:
         raise FileNotFoundError("No file uploaded")
+
+def process_zip_file(uploaded_file):
+    resumes = []
+    with zipfile.ZipFile(uploaded_file, 'r') as zip_ref:
+        zip_ref.extractall("temp_resumes")  # Extract to a temporary directory
+        for file_name in zip_ref.namelist():
+            if file_name.endswith('.pdf'):  # Check for PDF files
+                with open(f"temp_resumes/{file_name}", "rb") as pdf_file:
+                    resumes.append((file_name, pdf_file.read()))
+    return resumes
+
+# Function to extract text from a PDF
+def extract_text_from_pdf(pdf_file):
+    pdf_document = fitz.open(stream=pdf_file, filetype="pdf")
+    text = ""
+    for page_num in range(len(pdf_document)):
+        page = pdf_document[page_num]
+        text += page.get_text() + "\n"
+    return text
+
+# Function to create a PDF blob
+def create_pdf_blob(pdf_file):
+    return pdf_file.read()
 
 # Inject CSS to add background image from URL and style elements
 def add_bg_from_url(image_url):
@@ -112,15 +132,11 @@ background_image_url = "https://e1.pxfuel.com/desktop-wallpaper/271/821/desktop-
 add_bg_from_url(background_image_url)
 
 # Streamlit App
-# st.set_page_config(page_title="ATS Resume Expert", layout="wide")
-st.title("ATS Tracking System")
+st.title("Applicant Tracking System")
 
-# Sidebar for uploading resume
-st.sidebar.header("Upload Resume")
-uploaded_file = st.sidebar.file_uploader("Upload your resume (PDF)...", type=["pdf"])
-
-if uploaded_file is not None:
-    st.sidebar.success("PDF Uploaded Successfully")
+# Sidebar for uploading resumes
+st.sidebar.header("Upload Resumes")
+uploaded_zip = st.sidebar.file_uploader("Upload a ZIP file containing resumes...", type=["zip"])
 
 # Job Description input
 st.header("Job Description")
@@ -129,10 +145,9 @@ input_text = st.text_area("Paste the job description here:")
 # Buttons for different actions
 col1, col2, col3 = st.columns(3)
 with col1:
-    submit1 = st.button("Evaluate Resume")
+    submit1 = st.button("Evaluate Resumes")
 
 with col2:
-    #submit2 = st.button("How Can I Improvise my Skills")
     pass
 
 with col3:
@@ -151,31 +166,32 @@ and may appear in various date formats.
 
 input_prompt3 = """
 You are a skilled ATS (Applicant Tracking System) scanner with a deep understanding of data science and ATS functionality. 
-You are tasked with evaluating a resume against the provided job description. Based on this comparison, give the percentage match of 
-the resume against the job description. The output should be in percentage.
-
-Additionally, categorize the resume by listing only the missing keywords or skills from the resume that are required for the job. 
-Do not mention keywords that are already present in the resume as missing. Provide your final thoughts on the overall suitability of 
-the resume for the role.
+You are tasked with evaluating a resume against the provided job description. Based on this comparison, diaplay only the percentage match of 
+the resume against the job description and suggest resume is good fit or not in one line. 
 """
 
 # Action handlers for the buttons
 if submit1:
-    if uploaded_file is not None:
-        pdf_content = input_pdf_setup(uploaded_file)
-        if pdf_content:
-            response = get_gemini_response(input_prompt1, pdf_content, input_text)
-            st.subheader("Evaluation Result")
+    if uploaded_zip is not None:
+        resumes = process_zip_file(uploaded_zip)
+        for file_name, pdf_content in resumes:
+            resume_text = extract_text_from_pdf(io.BytesIO(pdf_content))
+            response = get_gemini_response(input_prompt1, [resume_text], input_text)
+            st.subheader(f"Evaluation Result for {file_name}")
             st.write(response)
     else:
-        st.write("Please upload the resume")
+        st.write("Please upload the ZIP file containing resumes.")
 
 elif submit3:
-    if uploaded_file is not None:
-        pdf_content = input_pdf_setup(uploaded_file)
-        if pdf_content:
-            response = get_gemini_response(input_prompt3, pdf_content, input_text)
-            st.subheader("Percentage Match Result")
+    st.subheader("Percentage Match are as follow")  
+    if uploaded_zip is not None:
+        resumes = process_zip_file(uploaded_zip)
+        for index, (file_name, pdf_content) in enumerate(resumes, start=1):
+            resume_text = extract_text_from_pdf(io.BytesIO(pdf_content))
+            response = get_gemini_response(input_prompt3, [resume_text], input_text)
+            # Extract just the resume name from the file path
+            resume_name = os.path.basename(file_name)
+            st.subheader(f"{resume_name}")
             st.write(response)
     else:
-        st.write("Please upload the resume")
+        st.write("Please upload the ZIP file containing resumes.")
